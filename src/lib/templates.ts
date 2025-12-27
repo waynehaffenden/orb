@@ -2,8 +2,11 @@ import { readFile, readdir, copyFile, mkdir } from "fs/promises";
 import { existsSync } from "fs";
 import path from "path";
 import Handlebars from "handlebars";
-import type { TemplateContext, TemplateManifest, TemplateDefinition, TemplatePrompt, ConditionalFileMapping } from "../types.js";
+import type { TemplateContext, TemplateManifest, TemplateDefinition, TemplatePrompt, ConditionalFileMapping, TemplateCommand } from "../types.js";
 import { loadSources, getSourcePath, readManifest } from "./sources.js";
+import { $ } from "bun";
+import chalk from "chalk";
+import { confirm } from "@inquirer/prompts";
 
 const DEFAULT_IGNORE = [
   ".git",
@@ -496,4 +499,82 @@ export async function getVariantFilesForPrompt(
   }
 
   return affectedFiles;
+}
+
+export async function getTemplateCommands(templateName: string): Promise<TemplateCommand[]> {
+  const manifest = await getManifest();
+  if (!manifest?.templates) return [];
+
+  const chain = await getInheritanceChain(templateName);
+  const commands: TemplateCommand[] = [];
+
+  for (const tmpl of chain) {
+    const def = manifest.templates[tmpl];
+    if (def?.commands) {
+      commands.push(...def.commands);
+    }
+  }
+
+  return commands;
+}
+
+export interface CommandResult {
+  name: string;
+  success: boolean;
+  error?: string;
+}
+
+export async function executeTemplateCommands(
+  commands: TemplateCommand[],
+  projectPath: string,
+  options: { skipConfirmation?: boolean } = {}
+): Promise<{ success: boolean; results: CommandResult[] }> {
+  if (commands.length === 0) {
+    return { success: true, results: [] };
+  }
+
+  // Display commands to user
+  console.log(chalk.dim("\nThe following commands will be run:"));
+  for (let i = 0; i < commands.length; i++) {
+    const cmd = commands[i];
+    console.log(`  ${chalk.cyan(`${i + 1}.`)} ${chalk.bold(cmd.name)}: ${cmd.run}`);
+    if (cmd.description) {
+      console.log(`     ${chalk.dim(cmd.description)}`);
+    }
+  }
+  console.log();
+
+  // Ask for confirmation unless skipped
+  if (!options.skipConfirmation) {
+    const shouldRun = await confirm({
+      message: "Run these commands?",
+      default: false,
+    });
+
+    if (!shouldRun) {
+      console.log(chalk.yellow("Skipped running commands"));
+      return { success: true, results: [] };
+    }
+  }
+
+  console.log(chalk.dim("Running commands...\n"));
+
+  const results: CommandResult[] = [];
+
+  for (const cmd of commands) {
+    try {
+      await $`bash -c ${cmd.run}`.cwd(projectPath);
+      console.log(`${chalk.green("✓")} ${cmd.name}`);
+      results.push({ name: cmd.name, success: true });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.log(`${chalk.red("✗")} ${cmd.name}: ${errorMessage}`);
+      results.push({ name: cmd.name, success: false, error: errorMessage });
+    }
+  }
+
+  return {
+    success: results.every(r => r.success),
+    results,
+  };
 }

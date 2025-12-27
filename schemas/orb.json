@@ -55,6 +55,13 @@
           "additionalProperties": {
             "$ref": "#/$defs/conditionalFileMapping"
           }
+        },
+        "commands": {
+          "type": "array",
+          "description": "Commands to run after template operations. Commands cascade through inheritance - parent commands run first.",
+          "items": {
+            "$ref": "#/$defs/templateCommand"
+          }
         }
       }
     },
@@ -106,6 +113,25 @@
           "description": "Choices for select prompts"
         }
       }
+    },
+    "templateCommand": {
+      "type": "object",
+      "required": ["name", "run"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Identifier for the command"
+        },
+        "run": {
+          "type": "string",
+          "description": "Shell command to execute"
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-readable description of what this command does"
+        }
+      },
+      "additionalProperties": false
     }
   }
 }

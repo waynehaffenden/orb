@@ -11,13 +11,23 @@ import {
   getMergedTemplateFiles,
   getTemplateContent,
   getTemplatePrompts,
+  getTemplateCommands,
+  executeTemplateCommands,
   templateExists,
 } from "../lib/templates.js";
 import { initGit, addRemote, initialCommit, isGitAvailable } from "../lib/git.js";
 import { selectTemplate, askPrompt } from "../lib/prompts.js";
 import type { TemplateContext } from "../types.js";
 
-export async function initCommand(projectNameArg?: string, templateArg?: string): Promise<void> {
+interface InitOptions {
+  runCommands?: boolean;
+}
+
+export async function initCommand(
+  projectNameArg?: string,
+  templateArg?: string,
+  options: InitOptions = {}
+): Promise<void> {
   const projectName =
     projectNameArg ||
     (await input({
@@ -142,6 +152,14 @@ export async function initCommand(projectNameArg?: string, templateArg?: string)
     created,
   });
   console.log(`${chalk.green("✓")} Added to project registry`);
+
+  // Run template commands if defined
+  const commands = await getTemplateCommands(template);
+  if (commands.length > 0) {
+    await executeTemplateCommands(commands, projectPath, {
+      skipConfirmation: options.runCommands,
+    });
+  }
 
   console.log(chalk.bold.green(`\nDone! `), chalk.dim(`cd ${projectPath} to get started.`));
 }

@@ -14,7 +14,15 @@ import {
   updateLockFileVersion,
   hashContent,
 } from "../lib/projects.js";
-import { getMergedTemplateFiles, getTemplatePath, getTemplatePrompts, getCurrentSourceVersion, copyTemplateFile } from "../lib/templates.js";
+import {
+  getMergedTemplateFiles,
+  getTemplatePath,
+  getTemplatePrompts,
+  getCurrentSourceVersion,
+  copyTemplateFile,
+  getTemplateCommands,
+  executeTemplateCommands,
+} from "../lib/templates.js";
 import { isGitAvailable } from "../lib/git.js";
 import { askPrompt } from "../lib/prompts.js";
 import type { Project, SyncResult, TemplateContext, TemplatePrompt } from "../types.js";
@@ -26,6 +34,7 @@ interface SyncOptions {
   branch?: string;
   dryRun?: boolean;
   message?: string;
+  runCommands?: boolean;
 }
 
 async function findNewPrompts(
@@ -189,6 +198,16 @@ export async function syncCommand(
         } else {
           console.log(chalk.yellow(`  [DRY RUN] Would prompt to delete these files`));
         }
+      }
+    }
+
+    // Run template commands if files were updated
+    if (hasUpdates && !options.dryRun) {
+      const commands = await getTemplateCommands(project.template);
+      if (commands.length > 0) {
+        await executeTemplateCommands(commands, project.path, {
+          skipConfirmation: options.runCommands,
+        });
       }
     }
   }

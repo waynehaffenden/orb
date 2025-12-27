@@ -49,11 +49,18 @@ export interface ConditionalFileMapping {
   mapping: Record<string, string>;
 }
 
+export interface TemplateCommand {
+  name: string;
+  run: string;
+  description?: string;
+}
+
 export interface TemplateDefinition {
   extends?: string;
   description?: string;
   prompts?: TemplatePrompt[];
   conditionalFiles?: Record<string, ConditionalFileMapping>;
+  commands?: TemplateCommand[];
 }
 
 export interface TemplateManifest {

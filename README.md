@@ -8,6 +8,7 @@ A CLI for managing project templates and syncing common files across multiple pr
 - **Inheritance**: Templates can extend other templates (CSS-like cascade)
 - **Prompts**: Collect user input when creating projects with input, select, and confirm prompts
 - **Conditional Files**: Include different files based on prompt answers (e.g., different LICENSE files)
+- **Commands**: Run post-init commands (npm install, build, etc.) with cascading inheritance
 - **Sync**: Keep common files (LICENSE, .gitignore, etc.) in sync across all your projects
 - **Conflict Detection**: Smart handling of local modifications vs template updates
 
@@ -176,6 +177,45 @@ Conditional files let you include different file variants based on prompt answer
 
 The output file (`LICENSE`) will contain the content from the selected variant.
 
+### Commands
+
+Templates can define commands to run after project creation or sync. Commands cascade through inheritance - parent commands run first, then child template commands:
+
+```json
+{
+  "templates": {
+    "base": {
+      "commands": [
+        {
+          "name": "install",
+          "run": "npm install",
+          "description": "Install dependencies"
+        }
+      ]
+    },
+    "node": {
+      "extends": "base",
+      "commands": [
+        {
+          "name": "build",
+          "run": "npm run build",
+          "description": "Build the project"
+        }
+      ]
+    }
+  }
+}
+```
+
+When creating a project from `node`, both commands run in order: `npm install` then `npm run build`.
+
+By default, orb asks for confirmation before running commands. Use `--run-commands` to skip:
+
+```bash
+orb init my-project --run-commands
+orb sync --all --run-commands
+```
+
 ### .orbignore
 
 Exclude files from being treated as templates:
@@ -212,9 +252,9 @@ Custom variables from prompts are also available (e.g., `description`, `author`,
 
 | Command | Description |
 |---------|-------------|
-| `orb init [name] [template]` | Create a new project |
+| `orb init [name] [template]` | Create a new project (use `--run-commands` to auto-run commands) |
 | `orb add [path]` | Add an existing project to the registry |
-| `orb sync [file]` | Sync templates to projects |
+| `orb sync [file]` | Sync templates to projects (use `--run-commands` to auto-run commands) |
 | `orb status` | Check sync status |
 | `orb list` | List registered projects |
 | `orb scan [path]` | Scan for orb.lock projects |
@@ -238,6 +278,7 @@ Options:
   -m, --message <msg>    Custom commit message
   -b, --branch <name>    Create a branch for changes
   -d, --dry-run          Preview without making changes
+  --run-commands         Run template commands without confirmation
 ```
 
 ## Project Files

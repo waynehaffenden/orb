@@ -1,6 +1,6 @@
 {
   "name": "orb",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "A CLI for managing project templates and syncing common files across multiple projects.",
   "author": "Wayne Haffenden",
   "license": "MIT",

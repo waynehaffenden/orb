@@ -22,6 +22,7 @@ program
 program
   .command("init [project-name] [template]")
   .description("Create a new project from templates")
+  .option("--run-commands", "Run template commands without confirmation")
   .action(initCommand);
 
 program
@@ -38,6 +39,7 @@ program
   .option("-m, --message <msg>", "Custom commit message")
   .option("-b, --branch <name>", "Create a branch for the changes")
   .option("-d, --dry-run", "Show what would happen without making changes")
+  .option("--run-commands", "Run template commands without confirmation")
   .action(syncCommand);
 
 program
