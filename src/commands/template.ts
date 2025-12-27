@@ -305,7 +305,7 @@ async function templateInit(targetPath?: string): Promise<void> {
 
   // Create orb.json manifest
   const manifest = {
-    $schema: "https://raw.githubusercontent.com/anthropics/orb/main/schemas/orb.json",
+    $schema: "https://raw.githubusercontent.com/waynehaffenden/orb/main/schemas/orb.json",
     name,
     version: "0.1.0",
     ...(author && { author }),
