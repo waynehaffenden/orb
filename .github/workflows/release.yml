@@ -92,7 +92,7 @@ jobs:
             const version = context.ref.replace('refs/tags/v', '');
 
             const formula = `class Orb < Formula
-              desc "Project template & sync CLI"
+              desc "A CLI for managing project templates and syncing common files across multiple projects."
               homepage "https://github.com/waynehaffenden/orb"
               version "${version}"
               license "MIT"
@@ -147,7 +147,7 @@ jobs:
               owner: 'waynehaffenden',
               repo: 'homebrew-tap',
               path: 'Formula/orb.rb',
-              message: `chore(orb): update to v${version}`,
+              message: `chore: update to v${version}`,
               content: Buffer.from(formula).toString('base64'),
               ...(sha && { sha }),
             });
