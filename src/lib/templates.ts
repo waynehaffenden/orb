@@ -183,7 +183,8 @@ export async function renderTemplate(
   context: TemplateContext
 ): Promise<string> {
   const content = await readFile(templatePath, "utf-8");
-  const template = Handlebars.compile(content);
+  // Disable HTML escaping - we're generating source files, not HTML
+  const template = Handlebars.compile(content, { noEscape: true });
   return template(context);
 }
 
@@ -536,7 +537,7 @@ export async function executeTemplateCommands(
   // Display commands to user
   console.log(chalk.dim("\nThe following commands will be run:"));
   for (let i = 0; i < commands.length; i++) {
-    const cmd = commands[i];
+    const cmd = commands[i]!;
     console.log(`  ${chalk.cyan(`${i + 1}.`)} ${chalk.bold(cmd.name)}: ${cmd.run}`);
     if (cmd.description) {
       console.log(`     ${chalk.dim(cmd.description)}`);

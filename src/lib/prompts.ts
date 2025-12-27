@@ -26,7 +26,12 @@ export async function askPrompt(prompt: TemplatePrompt): Promise<string | boolea
 export async function selectTemplate(): Promise<string> {
   const availableTemplates = await getAvailableTemplates();
 
-  if (availableTemplates.length > 0) {
+  // Auto-select if only one template available
+  if (availableTemplates.length === 1) {
+    return availableTemplates[0]!;
+  }
+
+  if (availableTemplates.length > 1) {
     return select({
       message: "Template:",
       choices: availableTemplates.map(t => ({ name: t, value: t })),

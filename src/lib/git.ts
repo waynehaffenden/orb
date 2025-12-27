@@ -43,14 +43,6 @@ export async function addRemote(dir: string, url: string): Promise<boolean> {
   }, false);
 }
 
-export async function initialCommit(dir: string): Promise<boolean> {
-  return runGit(async () => {
-    await $`git add -A`.cwd(dir).quiet();
-    await $`git commit -m "Initial commit"`.cwd(dir).quiet();
-    return true;
-  }, false);
-}
-
 export async function hasUncommittedChanges(dir: string): Promise<boolean> {
   return runGit(async () => {
     const result = await $`git status --porcelain`.cwd(dir).quiet();

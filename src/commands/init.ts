@@ -15,7 +15,7 @@ import {
   executeTemplateCommands,
   templateExists,
 } from "../lib/templates.js";
-import { initGit, addRemote, initialCommit, isGitAvailable } from "../lib/git.js";
+import { initGit, addRemote, isGitAvailable } from "../lib/git.js";
 import { selectTemplate, askPrompt } from "../lib/prompts.js";
 import type { TemplateContext } from "../types.js";
 
@@ -131,13 +131,6 @@ export async function initCommand(
           console.log(`${chalk.yellow("⚠")} Could not add remote origin`);
           remote = undefined;
         }
-      }
-
-      const committed = await initialCommit(projectPath);
-      if (committed) {
-        console.log(`${chalk.green("✓")} Created initial commit`);
-      } else {
-        console.log(`${chalk.yellow("⚠")} Could not create initial commit`);
       }
     } else {
       console.log(`${chalk.yellow("⚠")} Could not initialize git repository`);
