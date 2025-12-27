@@ -1,0 +1,111 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/waynehaffenden/orb/main/schemas/orb.json",
+  "title": "Orb Template Manifest",
+  "description": "Schema for orb.json template manifest files",
+  "type": "object",
+  "required": ["name"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Name of the template source"
+    },
+    "version": {
+      "type": "string",
+      "description": "Semantic version of the template source (e.g. 1.0.0)"
+    },
+    "author": {
+      "type": "string",
+      "description": "Author of the templates"
+    },
+    "description": {
+      "type": "string",
+      "description": "Description of the template source"
+    },
+    "templates": {
+      "type": "object",
+      "description": "Template definitions",
+      "additionalProperties": {
+        "$ref": "#/$defs/templateDefinition"
+      }
+    }
+  },
+  "$defs": {
+    "templateDefinition": {
+      "type": "object",
+      "properties": {
+        "extends": {
+          "type": "string",
+          "description": "Parent template to inherit from"
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of this template"
+        },
+        "prompts": {
+          "type": "array",
+          "description": "Prompts to ask when using this template",
+          "items": {
+            "$ref": "#/$defs/templatePrompt"
+          }
+        },
+        "conditionalFiles": {
+          "type": "object",
+          "description": "Files that vary based on prompt answers. Keys are output filenames, values define the source prompt and file mapping. If not specified, uses naming convention (e.g., LICENSE.MIT, LICENSE.Apache-2.0)",
+          "additionalProperties": {
+            "$ref": "#/$defs/conditionalFileMapping"
+          }
+        }
+      }
+    },
+    "conditionalFileMapping": {
+      "type": "object",
+      "required": ["source", "mapping"],
+      "properties": {
+        "source": {
+          "type": "string",
+          "description": "Name of the prompt whose answer determines which file to use"
+        },
+        "mapping": {
+          "type": "object",
+          "description": "Maps prompt answer values to source file paths",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "templatePrompt": {
+      "type": "object",
+      "required": ["name", "message"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Variable name for the prompt answer"
+        },
+        "message": {
+          "type": "string",
+          "description": "Message to display to the user"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["input", "select", "confirm"],
+          "default": "input",
+          "description": "Type of prompt"
+        },
+        "default": {
+          "oneOf": [
+            { "type": "string" },
+            { "type": "boolean" }
+          ],
+          "description": "Default value for the prompt"
+        },
+        "choices": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Choices for select prompts"
+        }
+      }
+    }
+  }
+}

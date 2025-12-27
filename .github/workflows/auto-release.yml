@@ -1,0 +1,69 @@
+name: Auto Release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "bun.lock"
+      - "package.json"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_TOKEN }}
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Check if release needed
+        id: check
+        run: |
+          CURRENT_VERSION=$(jq -r .version package.json)
+          if git rev-parse "v$CURRENT_VERSION" >/dev/null 2>&1; then
+            echo "Tag v$CURRENT_VERSION already exists, checking for dep updates..."
+            LAST_TAG=$(git describe --tags --abbrev=0)
+            CHANGES=$(git log $LAST_TAG..HEAD --oneline -- bun.lock)
+            if [ -n "$CHANGES" ]; then
+              # Bump patch version
+              IFS='.' read -r major minor patch <<< "$CURRENT_VERSION"
+              NEW_VERSION="$major.$minor.$((patch + 1))"
+              echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+              echo "bump=true" >> $GITHUB_OUTPUT
+            else
+              echo "bump=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+            echo "bump=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Bump version
+        if: steps.check.outputs.bump == 'true'
+        run: |
+          NEW_VERSION="${{ steps.check.outputs.version }}"
+          jq ".version = \"$NEW_VERSION\"" package.json > package.json.tmp
+          mv package.json.tmp package.json
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add package.json
+          git commit -m "chore: bump version to $NEW_VERSION"
+          git push
+
+      - name: Create tag
+        if: steps.check.outputs.version != ''
+        run: |
+          VERSION="${{ steps.check.outputs.version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "v$VERSION"
+          git push origin "v$VERSION"

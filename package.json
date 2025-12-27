@@ -1,0 +1,35 @@
+{
+  "name": "orb",
+  "version": "1.0.0",
+  "description": "A CLI for managing project templates and syncing common files across multiple projects.",
+  "author": "Wayne Haffenden",
+  "license": "MIT",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/waynehaffenden/orb.git"
+  },
+  "type": "module",
+  "bin": {
+    "orb": "./bin/orb.ts"
+  },
+  "scripts": {
+    "dev": "bun run bin/orb.ts",
+    "build": "bun build ./bin/orb.ts --compile --outfile dist/orb",
+    "link": "bun link",
+    "prepare": "husky"
+  },
+  "dependencies": {
+    "@inquirer/prompts": "^8.1.0",
+    "chalk": "^5.6.2",
+    "commander": "^14.0.2",
+    "handlebars": "^4.7.8"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^20.2.0",
+    "@commitlint/config-conventional": "^20.2.0",
+    "@types/bun": "latest",
+    "husky": "^9.1.7",
+    "typescript": "^5.0.0"
+  }
+}
