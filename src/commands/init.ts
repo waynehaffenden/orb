@@ -63,6 +63,7 @@ export async function initCommand(
   const context: TemplateContext = {
     projectName,
     template,
+    year: new Date().getFullYear(),
   };
 
   for (const prompt of prompts) {

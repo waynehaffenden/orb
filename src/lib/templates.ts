@@ -125,9 +125,28 @@ async function getTemplateDirectoryFiles(templateName: string): Promise<string[]
   if (!existsSync(templateDir)) return [];
 
   const ignorePatterns = await readOrbIgnore(templatesDir);
-  const files = await readdir(templateDir);
 
-  return files.filter(file => !shouldIgnore(file, ignorePatterns));
+  async function collectFiles(dir: string, prefix: string = ""): Promise<string[]> {
+    const entries = await readdir(dir, { withFileTypes: true });
+    const files: string[] = [];
+
+    for (const entry of entries) {
+      const relativePath = prefix ? `${prefix}/${entry.name}` : entry.name;
+
+      if (shouldIgnore(entry.name, ignorePatterns)) continue;
+
+      if (entry.isDirectory()) {
+        const subFiles = await collectFiles(path.join(dir, entry.name), relativePath);
+        files.push(...subFiles);
+      } else {
+        files.push(relativePath);
+      }
+    }
+
+    return files;
+  }
+
+  return collectFiles(templateDir);
 }
 
 export async function getMergedTemplateFiles(
@@ -395,12 +414,14 @@ async function detectVariantFiles(
 
   if (!existsSync(templateDir)) return variantMap;
 
-  const files = await readdir(templateDir);
+  const entries = await readdir(templateDir, { withFileTypes: true });
 
-  for (const file of files) {
-    if (shouldIgnore(file, ignorePatterns)) continue;
+  for (const entry of entries) {
+    // Only process files, not directories
+    if (!entry.isFile()) continue;
+    if (shouldIgnore(entry.name, ignorePatterns)) continue;
 
-    const parsed = parseVariantFilename(file);
+    const parsed = parseVariantFilename(entry.name);
     if (!parsed) continue;
 
     const { baseName, variant } = parsed;
@@ -408,7 +429,7 @@ async function detectVariantFiles(
     if (!variantMap.has(baseName)) {
       variantMap.set(baseName, new Map());
     }
-    variantMap.get(baseName)!.set(variant, file);
+    variantMap.get(baseName)!.set(variant, entry.name);
   }
 
   // Only keep entries with multiple variants (actual variant sets)

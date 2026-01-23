@@ -44,7 +44,15 @@ export async function addCommand(inputPath?: string): Promise<void> {
     });
 
     if (createLockFile) {
-      await writeLockFile(projectPath, { template, created });
+      await writeLockFile(projectPath, {
+        template,
+        created,
+        context: {
+          projectName: name,
+          template,
+          year: new Date().getFullYear(),
+        },
+      });
       console.log(`${chalk.green("✓")} Created orb.lock file`);
     }
   }

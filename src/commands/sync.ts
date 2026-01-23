@@ -132,7 +132,14 @@ export async function syncCommand(
 
     // Ask new prompts first so we have full context for getMergedTemplateFiles
     const newContext = await askNewPrompts(project, options.dryRun);
-    const fullContext = { ...context, ...newContext };
+    // Ensure built-in variables are always available (fallback for older lock files)
+    const fullContext: TemplateContext = {
+      projectName: project.name,
+      template: project.template,
+      year: new Date().getFullYear(),
+      ...context,
+      ...newContext,
+    };
 
     const mergedFiles = await getMergedTemplateFiles(project.template, fullContext);
 
