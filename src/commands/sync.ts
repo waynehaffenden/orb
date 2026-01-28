@@ -24,6 +24,7 @@ import {
   copyTemplateFile,
   getTemplateCommands,
   executeTemplateCommands,
+  renderTemplate,
 } from "../lib/templates.js";
 import { isGitAvailable } from "../lib/git.js";
 import { askPrompt } from "../lib/prompts.js";
@@ -352,8 +353,9 @@ async function syncFileToProject(
     };
   }
 
-  const templateContent = await readFile(templatePath, "utf-8");
-  const templateHash = hashContent(templateContent);
+  // Process template through Handlebars to get the rendered content for comparison
+  const processedContent = await renderTemplate(templatePath, context);
+  const templateHash = hashContent(processedContent);
 
   const lockFile = await readLockFile(project.path);
   const lastSyncedHash = lockFile?.synced?.[filename];
