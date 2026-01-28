@@ -132,3 +132,41 @@ export async function updateLockFileVersion(
   lockFile.version = version;
   await writeLockFile(projectPath, lockFile);
 }
+
+export async function readProjectOrbIgnore(projectPath: string): Promise<string[]> {
+  const ignorePath = path.join(projectPath, ".orbignore");
+  if (!existsSync(ignorePath)) {
+    return [];
+  }
+  const content = await readFile(ignorePath, "utf-8");
+  return content
+    .split("\n")
+    .map(line => line.trim())
+    .filter(line => line && !line.startsWith("#"));
+}
+
+export function shouldIgnoreFile(filename: string, patterns: string[]): boolean {
+  for (const pattern of patterns) {
+    // Exact match
+    if (pattern === filename) return true;
+
+    // Wildcard at end (prefix match)
+    if (pattern.endsWith("*") && filename.startsWith(pattern.slice(0, -1))) return true;
+
+    // Wildcard at start (suffix match)
+    if (pattern.startsWith("*") && filename.endsWith(pattern.slice(1))) return true;
+
+    // Directory match (anything inside the directory)
+    if (pattern.endsWith("/")) {
+      const dir = pattern.slice(0, -1);
+      if (filename === dir || filename.startsWith(dir + "/")) return true;
+    }
+
+    // Simple glob pattern matching
+    if (pattern.includes("*")) {
+      const regex = new RegExp("^" + pattern.replace(/\*/g, ".*") + "$");
+      if (regex.test(filename)) return true;
+    }
+  }
+  return false;
+}

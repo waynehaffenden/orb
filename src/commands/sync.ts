@@ -13,6 +13,8 @@ import {
   updateLockFileContext,
   updateLockFileVersion,
   hashContent,
+  readProjectOrbIgnore,
+  shouldIgnoreFile,
 } from "../lib/projects.js";
 import {
   getMergedTemplateFiles,
@@ -143,10 +145,27 @@ export async function syncCommand(
 
     const mergedFiles = await getMergedTemplateFiles(project.template, fullContext);
 
+    // Read project-level .orbignore patterns
+    const ignorePatterns = await readProjectOrbIgnore(project.path);
+
     let filesToSync: string[];
     if (options.all) {
       filesToSync = Array.from(mergedFiles.keys());
+      // Filter out ignored files
+      if (ignorePatterns.length > 0) {
+        const beforeCount = filesToSync.length;
+        filesToSync = filesToSync.filter(f => !shouldIgnoreFile(f, ignorePatterns));
+        const ignoredCount = beforeCount - filesToSync.length;
+        if (ignoredCount > 0) {
+          console.log(chalk.dim(`  Skipping ${ignoredCount} file(s) from .orbignore`));
+        }
+      }
     } else if (file) {
+      // Check if specific file is ignored
+      if (shouldIgnoreFile(file, ignorePatterns)) {
+        console.log(chalk.yellow(`  ${file} is in .orbignore, skipping`));
+        continue;
+      }
       filesToSync = [file];
     } else {
       filesToSync = [];
@@ -395,7 +414,15 @@ async function findOrphanedFiles(
   const lockFile = await readLockFile(project.path);
   if (!lockFile?.synced) return orphaned;
 
+  // Read project-level .orbignore patterns
+  const ignorePatterns = await readProjectOrbIgnore(project.path);
+
   for (const syncedFile of Object.keys(lockFile.synced)) {
+    // Skip files that are in .orbignore
+    if (shouldIgnoreFile(syncedFile, ignorePatterns)) {
+      continue;
+    }
+
     if (!currentTemplateFiles.has(syncedFile)) {
       const filePath = path.join(project.path, syncedFile);
       if (existsSync(filePath)) {

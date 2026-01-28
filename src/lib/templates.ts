@@ -11,32 +11,13 @@ import { confirm } from "@inquirer/prompts";
 const DEFAULT_IGNORE = [
   ".git",
   ".gitkeep",
-  ".orbignore",
   "orb.json",
   ".DS_Store",
   "node_modules",
 ];
 
-async function readOrbIgnore(templatesDir: string): Promise<string[]> {
-  const ignorePath = path.join(templatesDir, ".orbignore");
-  if (!existsSync(ignorePath)) {
-    return [];
-  }
-  const content = await readFile(ignorePath, "utf-8");
-  return content
-    .split("\n")
-    .map(line => line.trim())
-    .filter(line => line && !line.startsWith("#"));
-}
-
-function shouldIgnore(filename: string, patterns: string[]): boolean {
-  const allPatterns = [...DEFAULT_IGNORE, ...patterns];
-  for (const pattern of allPatterns) {
-    if (pattern === filename) return true;
-    if (pattern.endsWith("*") && filename.startsWith(pattern.slice(0, -1))) return true;
-    if (pattern.startsWith("*") && filename.endsWith(pattern.slice(1))) return true;
-  }
-  return false;
+function shouldIgnore(filename: string): boolean {
+  return DEFAULT_IGNORE.includes(filename);
 }
 
 async function getFirstSource(): Promise<{ name: string; path: string } | null> {
@@ -124,8 +105,6 @@ async function getTemplateDirectoryFiles(templateName: string): Promise<string[]
   const templateDir = path.join(templatesDir, templateName);
   if (!existsSync(templateDir)) return [];
 
-  const ignorePatterns = await readOrbIgnore(templatesDir);
-
   async function collectFiles(dir: string, prefix: string = ""): Promise<string[]> {
     const entries = await readdir(dir, { withFileTypes: true });
     const files: string[] = [];
@@ -133,7 +112,7 @@ async function getTemplateDirectoryFiles(templateName: string): Promise<string[]
     for (const entry of entries) {
       const relativePath = prefix ? `${prefix}/${entry.name}` : entry.name;
 
-      if (shouldIgnore(entry.name, ignorePatterns)) continue;
+      if (shouldIgnore(entry.name)) continue;
 
       if (entry.isDirectory()) {
         const subFiles = await collectFiles(path.join(dir, entry.name), relativePath);
@@ -159,13 +138,12 @@ export async function getMergedTemplateFiles(
 
   if (!templatesDir) return merged;
 
-  const ignorePatterns = await readOrbIgnore(templatesDir);
   const variantFiles = new Set<string>();
 
   // Collect all variant files to exclude them
   for (const tmpl of chain) {
     const templateDir = path.join(templatesDir, tmpl);
-    const variantMap = await detectVariantFiles(templateDir, ignorePatterns);
+    const variantMap = await detectVariantFiles(templateDir);
     for (const [, variants] of variantMap) {
       for (const file of variants.values()) {
         variantFiles.add(file);
@@ -235,14 +213,13 @@ export async function copyAllTemplates(
   if (!templatesDir) return [];
 
   const chain = await getInheritanceChain(templateName);
-  const ignorePatterns = await readOrbIgnore(templatesDir);
   const copied = new Set<string>();
   const variantFiles = new Set<string>();
 
   // First pass: collect all variant files to skip them
   for (const tmpl of chain) {
     const templateDir = path.join(templatesDir, tmpl);
-    const variantMap = await detectVariantFiles(templateDir, ignorePatterns);
+    const variantMap = await detectVariantFiles(templateDir);
     for (const [, variants] of variantMap) {
       for (const file of variants.values()) {
         variantFiles.add(file);
@@ -407,8 +384,7 @@ function parseVariantFilename(filename: string): { baseName: string; variant: st
 }
 
 async function detectVariantFiles(
-  templateDir: string,
-  ignorePatterns: string[]
+  templateDir: string
 ): Promise<Map<string, Map<string, string>>> {
   const variantMap = new Map<string, Map<string, string>>();
 
@@ -419,7 +395,7 @@ async function detectVariantFiles(
   for (const entry of entries) {
     // Only process files, not directories
     if (!entry.isFile()) continue;
-    if (shouldIgnore(entry.name, ignorePatterns)) continue;
+    if (shouldIgnore(entry.name)) continue;
 
     const parsed = parseVariantFilename(entry.name);
     if (!parsed) continue;
@@ -453,7 +429,6 @@ export async function resolveConditionalFile(
 
   const conditionalFiles = await getConditionalFiles(templateName);
   const chain = await getInheritanceChain(templateName);
-  const ignorePatterns = await readOrbIgnore(templatesDir);
 
   if (conditionalFiles[targetFile]) {
     const config = conditionalFiles[targetFile];
@@ -468,7 +443,7 @@ export async function resolveConditionalFile(
 
   for (const tmpl of chain.reverse()) {
     const templateDir = path.join(templatesDir, tmpl);
-    const variantMap = await detectVariantFiles(templateDir, ignorePatterns);
+    const variantMap = await detectVariantFiles(templateDir);
 
     if (variantMap.has(targetFile)) {
       const variants = variantMap.get(targetFile)!;
@@ -496,7 +471,6 @@ export async function getVariantFilesForPrompt(
   if (!templatesDir) return [];
 
   const chain = await getInheritanceChain(templateName);
-  const ignorePatterns = await readOrbIgnore(templatesDir);
   const conditionalFiles = await getConditionalFiles(templateName);
   const affectedFiles: string[] = [];
 
@@ -510,7 +484,7 @@ export async function getVariantFilesForPrompt(
   if (typeof promptValue === "string") {
     for (const tmpl of chain) {
       const templateDir = path.join(templatesDir, tmpl);
-      const variantMap = await detectVariantFiles(templateDir, ignorePatterns);
+      const variantMap = await detectVariantFiles(templateDir);
 
       for (const [baseName, variants] of variantMap) {
         if (variants.has(promptValue) && !affectedFiles.includes(baseName)) {

@@ -322,24 +322,12 @@ async function templateInit(targetPath?: string): Promise<void> {
     JSON.stringify(manifest, null, 2) + "\n"
   );
 
-  // Create .orbignore
-  const orbIgnore = `# Files to ignore when copying templates
-# Add patterns here (supports * wildcards)
-
-# Example:
-# *.md
-# docs/
-`;
-
-  await writeFile(path.join(destDir, ".orbignore"), orbIgnore);
-
   // Create .gitkeep in first template
   await writeFile(path.join(destDir, firstTemplate, ".gitkeep"), "");
 
   console.log(chalk.green("\n✓") + ` Created template source at ${destDir}`);
   console.log(chalk.dim(`\n  ${destDir}/`));
   console.log(chalk.dim(`  ├── orb.json`));
-  console.log(chalk.dim(`  ├── .orbignore`));
   console.log(chalk.dim(`  └── ${firstTemplate}/`));
   console.log(chalk.dim(`      └── .gitkeep`));
 

@@ -80,7 +80,6 @@ orb sync --all --commit --message "update templates"
 ```
 templates/
 ├── orb.json              # Manifest (required)
-├── .orbignore            # Files to ignore
 ├── base/                 # Base template
 │   ├── LICENSE.MIT       # Conditional file variant
 │   ├── LICENSE.Apache-2.0
@@ -216,16 +215,32 @@ orb init my-project --run-commands
 orb sync --all --run-commands
 ```
 
-### .orbignore
+### Project-Level .orbignore
 
-Exclude files from being treated as templates:
+The `.orbignore` file in your **project directory** (not template source) tells orb which files to skip during sync operations. This is useful for files that start from a template but become project-specific over time.
+
+Create `.orbignore` in your project root:
 
 ```
-# Comments are supported
-tests/
-*.test.ts
-docs/
+# Files to keep local (won't be synced from template)
+README.md        # Project-specific documentation
+CHANGELOG.md     # Project's own changelog
+docs/            # Custom documentation
+.env.example     # Project-specific environment variables
+config/*.local.* # Local configuration files
 ```
+
+**Pattern Support:**
+- Exact matches: `README.md`
+- Wildcards: `*.local`, `test-*`
+- Directories: `docs/` (ignores entire directory)
+- Glob patterns: `config/*.local.*`
+
+**Use Cases:**
+- Files you've customized after project creation
+- Project-specific documentation that shouldn't be overwritten
+- Configuration files with local modifications
+- Any file you want to maintain independently from the template
 
 ### Handlebars Templating
 
