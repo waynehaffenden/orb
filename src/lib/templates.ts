@@ -166,8 +166,11 @@ export async function getMergedTemplateFiles(
     const conditionalFiles = await getConditionalFiles(templateName);
     for (const [targetFile, config] of Object.entries(conditionalFiles)) {
       const promptValue = context[config.source];
-      if (promptValue && typeof promptValue === "string" && config.mapping[promptValue]) {
-        merged.set(targetFile, chain[chain.length - 1] || templateName);
+      if (promptValue != null) {
+        const key = String(promptValue);
+        if (key in config.mapping && config.mapping[key] != null) {
+          merged.set(targetFile, chain[chain.length - 1] || templateName);
+        }
       }
     }
   }
@@ -237,6 +240,11 @@ export async function copyAllTemplates(
       // Check if this file has a conditional variant
       const resolved = await resolveConditionalFile(templateName, file, context);
       if (resolved) {
+        if (resolved.sourceFile === null) {
+          // null means exclude this file
+          copied.add(file);
+          continue;
+        }
         // Find the actual source file path
         const variantSrc = await findVariantSourcePath(templatesDir, chain, resolved.sourceFile);
         if (variantSrc) {
@@ -260,13 +268,17 @@ export async function copyAllTemplates(
     if (copied.has(targetFile)) continue;
 
     const promptValue = context[config.source];
-    if (promptValue && typeof promptValue === "string" && config.mapping[promptValue]) {
-      const sourceFile = config.mapping[promptValue];
-      const variantSrc = await findVariantSourcePath(templatesDir, chain, sourceFile);
-      if (variantSrc) {
-        const dest = path.join(destDir, targetFile);
-        await copyTemplateFile(variantSrc, dest, context);
-        copied.add(targetFile);
+    if (promptValue != null) {
+      const key = String(promptValue);
+      if (key in config.mapping) {
+        const sourceFile = config.mapping[key];
+        if (sourceFile === null) continue;
+        const variantSrc = await findVariantSourcePath(templatesDir, chain, sourceFile);
+        if (variantSrc) {
+          const dest = path.join(destDir, targetFile);
+          await copyTemplateFile(variantSrc, dest, context);
+          copied.add(targetFile);
+        }
       }
     }
   }
@@ -321,6 +333,7 @@ export async function getTemplatePath(
   if (context) {
     const resolved = await resolveConditionalFile(templateName, filename, context);
     if (resolved) {
+      if (resolved.sourceFile === null) return null;
       const variantPath = await findVariantSourcePath(templatesDir, chain, resolved.sourceFile);
       if (variantPath) return variantPath;
     }
@@ -423,7 +436,7 @@ export async function resolveConditionalFile(
   templateName: string,
   targetFile: string,
   context: TemplateContext
-): Promise<{ sourceFile: string; promptName: string } | null> {
+): Promise<{ sourceFile: string | null; promptName: string } | null> {
   const templatesDir = await getTemplatesDir();
   if (!templatesDir) return null;
 
@@ -433,11 +446,14 @@ export async function resolveConditionalFile(
   if (conditionalFiles[targetFile]) {
     const config = conditionalFiles[targetFile];
     const promptValue = context[config.source];
-    if (promptValue && typeof promptValue === "string" && config.mapping[promptValue]) {
-      return {
-        sourceFile: config.mapping[promptValue],
-        promptName: config.source,
-      };
+    if (promptValue != null) {
+      const key = String(promptValue);
+      if (key in config.mapping) {
+        return {
+          sourceFile: config.mapping[key] ?? null,
+          promptName: config.source,
+        };
+      }
     }
   }
 
@@ -449,9 +465,10 @@ export async function resolveConditionalFile(
       const variants = variantMap.get(targetFile)!;
 
       for (const [promptName, promptValue] of Object.entries(context)) {
-        if (typeof promptValue === "string" && variants.has(promptValue)) {
+        const key = String(promptValue);
+        if (variants.has(key)) {
           return {
-            sourceFile: variants.get(promptValue)!,
+            sourceFile: variants.get(key)!,
             promptName,
           };
         }

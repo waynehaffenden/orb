@@ -176,6 +176,31 @@ Conditional files let you include different file variants based on prompt answer
 
 The output file (`LICENSE`) will contain the content from the selected variant.
 
+#### Boolean Conditional Files
+
+Conditional files also work with `confirm` prompts. Boolean values are coerced to `"true"` / `"false"` string keys. Use `null` as a mapping value to exclude the file entirely:
+
+```json
+{
+  "prompts": [
+    { "name": "includeCI", "type": "confirm", "message": "Include CI workflow?", "default": true }
+  ],
+  "conditionalFiles": {
+    ".github/workflows/ci.yml": {
+      "source": "includeCI",
+      "mapping": {
+        "true": ".github/workflows/ci.yml.enabled",
+        "false": null
+      }
+    }
+  }
+}
+```
+
+- Answering **yes** (`true`) copies `.github/workflows/ci.yml.enabled` as `.github/workflows/ci.yml`
+- Answering **no** (`false`) excludes the file (mapped to `null`)
+- Omitting a key from the mapping also excludes the file
+
 ### Commands
 
 Templates can define commands to run after project creation or sync. Commands cascade through inheritance - parent commands run first, then child template commands:

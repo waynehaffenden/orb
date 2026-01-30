@@ -75,9 +75,9 @@
         },
         "mapping": {
           "type": "object",
-          "description": "Maps prompt answer values to source file paths",
+          "description": "Maps prompt answer values to source file paths. Use null to exclude the file for that value.",
           "additionalProperties": {
-            "type": "string"
+            "type": ["string", "null"]
           }
         }
       }

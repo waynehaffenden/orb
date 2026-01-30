@@ -46,7 +46,7 @@ export interface TemplatePrompt {
 
 export interface ConditionalFileMapping {
   source: string;
-  mapping: Record<string, string>;
+  mapping: Record<string, string | null>;
 }
 
 export interface TemplateCommand {
