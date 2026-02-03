@@ -161,15 +161,30 @@ export async function getMergedTemplateFiles(
     }
   }
 
-  // Add conditional files from manifest if context is provided
+  // Handle conditional files from manifest
+  const conditionalFiles = await getConditionalFiles(templateName);
+
+  // Remove conditional source files from merged — they are intermediaries, not output targets
+  for (const [, config] of Object.entries(conditionalFiles)) {
+    for (const sourceFile of Object.values(config.mapping)) {
+      if (sourceFile != null) {
+        merged.delete(sourceFile);
+      }
+    }
+  }
+
+  // Add/remove conditional targets based on context
   if (context) {
-    const conditionalFiles = await getConditionalFiles(templateName);
     for (const [targetFile, config] of Object.entries(conditionalFiles)) {
       const promptValue = context[config.source];
       if (promptValue != null) {
         const key = String(promptValue);
-        if (key in config.mapping && config.mapping[key] != null) {
-          merged.set(targetFile, chain[chain.length - 1] || templateName);
+        if (key in config.mapping) {
+          if (config.mapping[key] == null) {
+            merged.delete(targetFile);
+          } else {
+            merged.set(targetFile, chain[chain.length - 1] || templateName);
+          }
         }
       }
     }
@@ -230,12 +245,25 @@ export async function copyAllTemplates(
     }
   }
 
+  // Collect conditional source files to skip them
+  const conditionalSourceFiles = new Set<string>();
+  const conditionalFiles = await getConditionalFiles(templateName);
+  for (const [, config] of Object.entries(conditionalFiles)) {
+    for (const sourceFile of Object.values(config.mapping)) {
+      if (sourceFile != null) {
+        conditionalSourceFiles.add(sourceFile);
+      }
+    }
+  }
+
   // Second pass: copy files, resolving conditional files
   for (const tmpl of chain) {
     const files = await getTemplateDirectoryFiles(tmpl);
     for (const file of files) {
       // Skip variant files (they'll be copied via resolveConditionalFile)
       if (variantFiles.has(file)) continue;
+      // Skip conditional source files (they're intermediaries)
+      if (conditionalSourceFiles.has(file)) continue;
 
       // Check if this file has a conditional variant
       const resolved = await resolveConditionalFile(templateName, file, context);
@@ -263,7 +291,6 @@ export async function copyAllTemplates(
   }
 
   // Third pass: handle conditional files that don't have a base file
-  const conditionalFiles = await getConditionalFiles(templateName);
   for (const [targetFile, config] of Object.entries(conditionalFiles)) {
     if (copied.has(targetFile)) continue;
 
@@ -272,7 +299,7 @@ export async function copyAllTemplates(
       const key = String(promptValue);
       if (key in config.mapping) {
         const sourceFile = config.mapping[key];
-        if (sourceFile === null) continue;
+        if (sourceFile == null) continue;
         const variantSrc = await findVariantSourcePath(templatesDir, chain, sourceFile);
         if (variantSrc) {
           const dest = path.join(destDir, targetFile);
@@ -423,9 +450,13 @@ async function detectVariantFiles(
 
   // Only keep entries with multiple variants (actual variant sets)
   // Single files like "newfile.txt" should not be treated as variants
+  // Exception: single boolean variants (.true/.false) are always treated as variants
   for (const [baseName, variants] of variantMap) {
     if (variants.size < 2) {
-      variantMap.delete(baseName);
+      const onlyVariant = [...variants.keys()][0];
+      if (onlyVariant !== "true" && onlyVariant !== "false") {
+        variantMap.delete(baseName);
+      }
     }
   }
 

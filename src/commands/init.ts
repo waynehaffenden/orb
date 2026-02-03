@@ -9,7 +9,8 @@ import {
   getCurrentSourceName,
   getCurrentSourceVersion,
   getMergedTemplateFiles,
-  getTemplateContent,
+  getTemplatePath,
+  renderTemplate,
   getTemplatePrompts,
   getTemplateCommands,
   executeTemplateCommands,
@@ -96,11 +97,13 @@ export async function initCommand(
   const source = await getCurrentSourceName();
   const version = await getCurrentSourceVersion();
   const synced: Record<string, string> = {};
-  const mergedFiles = await getMergedTemplateFiles(template);
+  const mergedFiles = await getMergedTemplateFiles(template, context);
 
   for (const [targetFile] of mergedFiles) {
     try {
-      const content = await getTemplateContent(targetFile, template);
+      const tmplPath = await getTemplatePath(targetFile, template, context);
+      if (!tmplPath) continue;
+      const content = await renderTemplate(tmplPath, context);
       synced[targetFile] = hashContent(content);
     } catch {
       // Template not found, skip

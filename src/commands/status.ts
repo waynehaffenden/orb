@@ -3,7 +3,7 @@ import path from "path";
 import { existsSync } from "fs";
 import { readFile } from "fs/promises";
 import { getAllProjects, readLockFile, hashContent } from "../lib/projects.js";
-import { getMergedTemplateFiles, getTemplateContent, getCurrentSourceVersion } from "../lib/templates.js";
+import { getMergedTemplateFiles, getTemplatePath, renderTemplate, getCurrentSourceVersion } from "../lib/templates.js";
 
 export async function statusCommand(): Promise<void> {
   const projects = await getAllProjects();
@@ -41,7 +41,8 @@ export async function statusCommand(): Promise<void> {
     }
 
     const syncedHashes = lockFile?.synced || {};
-    const mergedFiles = await getMergedTemplateFiles(project.template);
+    const lockfileContext = lockFile?.context || {};
+    const mergedFiles = await getMergedTemplateFiles(project.template, lockfileContext);
 
     let upToDate = 0;
     let templateChanged = 0;
@@ -53,7 +54,9 @@ export async function statusCommand(): Promise<void> {
 
       let templateContent: string;
       try {
-        templateContent = await getTemplateContent(targetFile, project.template);
+        const tmplPath = await getTemplatePath(targetFile, project.template, lockfileContext);
+        if (!tmplPath) continue;
+        templateContent = await renderTemplate(tmplPath, lockfileContext);
       } catch {
         continue;
       }
