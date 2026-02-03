@@ -129,6 +129,12 @@
         "description": {
           "type": "string",
           "description": "Human-readable description of what this command does"
+        },
+        "on": {
+          "type": "string",
+          "enum": ["init", "sync", "both"],
+          "default": "both",
+          "description": "When to run this command: on init, sync, or both (default: both)"
         }
       },
       "additionalProperties": false

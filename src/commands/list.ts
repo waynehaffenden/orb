@@ -10,6 +10,9 @@ export async function listCommand(): Promise<void> {
     return;
   }
 
+  // Sort by template, then by name within each template
+  projects.sort((a, b) => a.template.localeCompare(b.template) || a.name.localeCompare(b.name));
+
   // Calculate column widths
   const nameWidth = Math.max(4, ...projects.map(p => p.name.length));
   const templateWidth = Math.max(8, ...projects.map(p => p.template.length));

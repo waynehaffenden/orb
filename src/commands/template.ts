@@ -85,6 +85,9 @@ async function templateList(): Promise<void> {
     });
   }
 
+  // Sort alphabetically by name
+  rows.sort((a, b) => a.name.localeCompare(b.name));
+
   // Calculate column widths
   const nameWidth = Math.max(4, ...rows.map(r => r.name.length));
   const authorWidth = Math.max(6, ...rows.map(r => r.author.length));

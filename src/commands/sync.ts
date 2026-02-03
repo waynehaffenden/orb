@@ -230,7 +230,7 @@ export async function syncCommand(
 
     // Run template commands if files were updated
     if (hasUpdates && !options.dryRun) {
-      const commands = await getTemplateCommands(project.template);
+      const commands = (await getTemplateCommands(project.template)).filter(c => (c.on ?? "both") !== "init");
       if (commands.length > 0) {
         await executeTemplateCommands(commands, project.path, {
           skipConfirmation: options.runCommands,

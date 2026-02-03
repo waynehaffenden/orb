@@ -151,7 +151,7 @@ export async function initCommand(
   console.log(`${chalk.green("✓")} Added to project registry`);
 
   // Run template commands if defined
-  const commands = await getTemplateCommands(template);
+  const commands = (await getTemplateCommands(template)).filter(c => (c.on ?? "both") !== "sync");
   if (commands.length > 0) {
     await executeTemplateCommands(commands, projectPath, {
       skipConfirmation: options.runCommands,

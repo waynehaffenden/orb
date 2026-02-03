@@ -53,6 +53,7 @@ export interface TemplateCommand {
   name: string;
   run: string;
   description?: string;
+  on?: "init" | "sync" | "both";
 }
 
 export interface TemplateDefinition {
