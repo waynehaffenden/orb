@@ -3,7 +3,7 @@ import path from "path";
 import { existsSync } from "fs";
 import { mkdir } from "fs/promises";
 import { input, confirm } from "@inquirer/prompts";
-import { addProject, writeLockFile, hashContent } from "../lib/projects.js";
+import { addProject, writeLockFile, hashContent, rehashSyncedFiles } from "../lib/projects.js";
 import {
   copyAllTemplates,
   getCurrentSourceName,
@@ -153,9 +153,15 @@ export async function initCommand(
   // Run template commands if defined
   const commands = (await getTemplateCommands(template)).filter(c => (c.on ?? "both") !== "sync");
   if (commands.length > 0) {
-    await executeTemplateCommands(commands, projectPath, {
+    const result = await executeTemplateCommands(commands, projectPath, {
       skipConfirmation: options.runCommands,
     });
+
+    // Re-hash synced files after commands run, since commands (e.g. package
+    // managers) may modify managed files like package.json or composer.json
+    if (result.results.length > 0) {
+      await rehashSyncedFiles(projectPath);
+    }
   }
 
   console.log(chalk.bold.green(`\nDone! `), chalk.dim(`cd ${projectPath} to get started.`));

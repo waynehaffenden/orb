@@ -237,8 +237,11 @@ By default, orb asks for confirmation before running commands. Use `--run-comman
 
 ```bash
 orb init my-project --run-commands
+orb add . --run-commands
 orb sync --all --run-commands
 ```
+
+After commands run, orb automatically re-hashes all synced files in `orb.lock`. This means if a command modifies a managed file (e.g. a package manager resolving `"latest"` to `"^1.2.3"` in `package.json`), the post-command state becomes the new baseline. The next `orb sync` won't flag those files as locally modified.
 
 ### Project-Level .orbignore
 
@@ -293,12 +296,12 @@ Custom variables from prompts are also available (e.g., `description`, `author`,
 | Command | Description |
 |---------|-------------|
 | `orb init [name] [template]` | Create a new project (use `--run-commands` to auto-run commands) |
-| `orb add [path]` | Add an existing project to the registry |
+| `orb add [path]` | Add an existing project to the registry (use `--run-commands` to auto-run commands) |
 | `orb sync [file]` | Sync templates to projects (use `--run-commands` to auto-run commands) |
 | `orb status` | Check sync status |
 | `orb list` | List registered projects |
 | `orb scan [path]` | Scan for orb.lock projects |
-| `orb remove <name>` | Remove project from registry |
+| `orb remove [name]` | Remove project from registry (accepts name or path, defaults to cwd) |
 | `orb template list` | List template sources |
 | `orb template add <url\|path>` | Add a template source |
 | `orb template update [name]` | Update template sources |

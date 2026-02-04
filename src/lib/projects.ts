@@ -58,6 +58,11 @@ export async function getProject(name: string): Promise<Project | undefined> {
   return registry.projects.find(p => p.name === name);
 }
 
+export async function getProjectByPath(projectPath: string): Promise<Project | undefined> {
+  const registry = await loadProjects();
+  return registry.projects.find(p => p.path === projectPath);
+}
+
 export async function getAllProjects(): Promise<Project[]> {
   const registry = await loadProjects();
   return registry.projects;
@@ -120,6 +125,30 @@ export async function updateLockFileContext(
 
   lockFile.context = { ...lockFile.context, ...newContext };
   await writeLockFile(projectPath, lockFile);
+}
+
+export async function rehashSyncedFiles(projectPath: string): Promise<void> {
+  const lockFile = await readLockFile(projectPath);
+  if (!lockFile?.synced) return;
+
+  let changed = false;
+
+  for (const filename of Object.keys(lockFile.synced)) {
+    const filePath = path.join(projectPath, filename);
+    if (!existsSync(filePath)) continue;
+
+    const content = await readFile(filePath, "utf-8");
+    const hash = hashContent(content);
+
+    if (lockFile.synced[filename] !== hash) {
+      lockFile.synced[filename] = hash;
+      changed = true;
+    }
+  }
+
+  if (changed) {
+    await writeLockFile(projectPath, lockFile);
+  }
 }
 
 export async function updateLockFileVersion(

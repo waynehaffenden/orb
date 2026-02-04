@@ -2,11 +2,21 @@ import chalk from "chalk";
 import path from "path";
 import { existsSync } from "fs";
 import { confirm, input } from "@inquirer/prompts";
-import { addProject, writeLockFile, readLockFile } from "../lib/projects.js";
+import { addProject, writeLockFile, readLockFile, rehashSyncedFiles } from "../lib/projects.js";
 import { getRemoteUrl, isGitRepo } from "../lib/git.js";
-import { selectTemplate } from "../lib/prompts.js";
+import { selectTemplate, askPrompt } from "../lib/prompts.js";
+import {
+  getTemplatePrompts,
+  getTemplateCommands,
+  executeTemplateCommands,
+} from "../lib/templates.js";
+import type { TemplateContext } from "../types.js";
 
-export async function addCommand(inputPath?: string): Promise<void> {
+interface AddOptions {
+  runCommands?: boolean;
+}
+
+export async function addCommand(inputPath?: string, options: AddOptions = {}): Promise<void> {
   const projectPath = path.resolve(inputPath || process.cwd());
 
   if (!existsSync(projectPath)) {
@@ -38,6 +48,17 @@ export async function addCommand(inputPath?: string): Promise<void> {
     template = await selectTemplate();
     created = new Date().toISOString();
 
+    const prompts = await getTemplatePrompts(template);
+    const context: TemplateContext = {
+      projectName: name,
+      template,
+      year: new Date().getFullYear(),
+    };
+
+    for (const prompt of prompts) {
+      context[prompt.name] = await askPrompt(prompt);
+    }
+
     const createLockFile = await confirm({
       message: "Create orb.lock file in project?",
       default: true,
@@ -47,11 +68,7 @@ export async function addCommand(inputPath?: string): Promise<void> {
       await writeLockFile(projectPath, {
         template,
         created,
-        context: {
-          projectName: name,
-          template,
-          year: new Date().getFullYear(),
-        },
+        context,
       });
       console.log(`${chalk.green("✓")} Created orb.lock file`);
     }
@@ -75,6 +92,20 @@ export async function addCommand(inputPath?: string): Promise<void> {
     console.log(chalk.dim(`  Path: ${projectPath}`));
     if (remote) {
       console.log(chalk.dim(`  Remote: ${remote}`));
+    }
+
+    // Run template commands if defined (init-applicable only)
+    const commands = (await getTemplateCommands(template)).filter(c => (c.on ?? "both") !== "sync");
+    if (commands.length > 0) {
+      const result = await executeTemplateCommands(commands, projectPath, {
+        skipConfirmation: options.runCommands,
+      });
+
+      // Re-hash synced files after commands run, since commands (e.g. package
+      // managers) may modify managed files like package.json or composer.json
+      if (result.results.length > 0) {
+        await rehashSyncedFiles(projectPath);
+      }
     }
   } catch (error) {
     console.log(chalk.red(`\nError: ${(error as Error).message}`));

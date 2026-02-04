@@ -15,6 +15,7 @@ import {
   hashContent,
   readProjectOrbIgnore,
   shouldIgnoreFile,
+  rehashSyncedFiles,
 } from "../lib/projects.js";
 import {
   getMergedTemplateFiles,
@@ -232,9 +233,15 @@ export async function syncCommand(
     if (hasUpdates && !options.dryRun) {
       const commands = (await getTemplateCommands(project.template)).filter(c => (c.on ?? "both") !== "init");
       if (commands.length > 0) {
-        await executeTemplateCommands(commands, project.path, {
+        const result = await executeTemplateCommands(commands, project.path, {
           skipConfirmation: options.runCommands,
         });
+
+        // Re-hash synced files after commands run, since commands (e.g. package
+        // managers) may modify managed files like package.json or composer.json
+        if (result.results.length > 0) {
+          await rehashSyncedFiles(project.path);
+        }
       }
     }
   }

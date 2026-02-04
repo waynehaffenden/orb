@@ -28,6 +28,7 @@ program
 program
   .command("add [path]")
   .description("Add an existing project to the registry")
+  .option("--run-commands", "Run template commands without confirmation")
   .action(addCommand);
 
 program
@@ -59,7 +60,7 @@ program
   .action(scanCommand);
 
 program
-  .command("remove <name>")
+  .command("remove [name]")
   .alias("rm")
   .description("Remove a project from the registry")
   .action(removeCommand);
