@@ -5,6 +5,21 @@ import { existsSync } from "fs";
 import { addProject, readLockFile, getAllProjects } from "../lib/projects.js";
 import { getRemoteUrl, isGitRepo } from "../lib/git.js";
 
+const SKIP_DIRS = new Set(["node_modules", ".git"]);
+
+async function* walkDirectories(dir: string): AsyncGenerator<string> {
+  const entries = await readdir(dir, { withFileTypes: true });
+
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    if (entry.name.startsWith(".") || SKIP_DIRS.has(entry.name)) continue;
+
+    const fullPath = path.join(dir, entry.name);
+    yield fullPath;
+    yield* walkDirectories(fullPath);
+  }
+}
+
 export async function scanCommand(scanPath?: string): Promise<void> {
   const searchPath = path.resolve(scanPath || process.cwd());
 
@@ -22,21 +37,16 @@ export async function scanCommand(scanPath?: string): Promise<void> {
   let added = 0;
   let skipped = 0;
 
-  const entries = await readdir(searchPath, { withFileTypes: true });
-
-  for (const entry of entries) {
-    if (!entry.isDirectory()) continue;
-    if (entry.name.startsWith(".")) continue; // Skip hidden directories
-
-    const projectPath = path.join(searchPath, entry.name);
+  for await (const projectPath of walkDirectories(searchPath)) {
     const lockFile = await readLockFile(projectPath);
 
     if (!lockFile) continue;
 
     found++;
+    const name = path.relative(searchPath, projectPath);
 
     if (existingPaths.has(projectPath)) {
-      console.log(chalk.dim(`  ⊜ ${entry.name} (already registered)`));
+      console.log(chalk.dim(`  ⊜ ${name} (already registered)`));
       skipped++;
       continue;
     }
@@ -48,16 +58,16 @@ export async function scanCommand(scanPath?: string): Promise<void> {
 
     try {
       await addProject({
-        name: entry.name,
+        name: path.basename(projectPath),
         path: projectPath,
         remote,
         template: lockFile.template,
         created: lockFile.created,
       });
-      console.log(chalk.green(`  ✓ ${entry.name}`));
+      console.log(chalk.green(`  ✓ ${name}`));
       added++;
     } catch (error) {
-      console.log(chalk.red(`  ✗ ${entry.name}: ${(error as Error).message}`));
+      console.log(chalk.red(`  ✗ ${name}: ${(error as Error).message}`));
     }
   }
 
