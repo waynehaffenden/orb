@@ -24,6 +24,7 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
+          token: ${{ github.token }}
 
       - name: Check if release needed
         id: check
